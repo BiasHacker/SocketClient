@@ -16,8 +16,6 @@ namespace SocketClient
 
         public event Action<byte[]> OnRecv;
 
-        byte[] bytes = new byte[0xffff];
-
         public SocketManager()
         {
             Socket = new Socket(
