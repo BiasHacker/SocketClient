@@ -1,2 +1,2 @@
 # SocketClient
-tcp/ip
+tcp/ip(+rtmp) クライアント
