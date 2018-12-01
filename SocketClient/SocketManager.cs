@@ -6,15 +6,21 @@ namespace SocketClient
 {
     public class SocketManager
     {
-        private Socket socket { get; set; }
+        public Socket Socket { get; set; }
 
         public delegate void Error(Exception e);
 
         public event Error OnError;
 
+        public event Action OnClose;
+
+        public event Action<byte[]> OnRecv;
+
+        byte[] bytes = new byte[0xffff];
+
         public SocketManager()
         {
-            socket = new Socket(
+            Socket = new Socket(
                 AddressFamily.InterNetwork,
                 SocketType.Stream,
                 ProtocolType.Tcp);
@@ -26,8 +32,8 @@ namespace SocketClient
             {
                 var ip = IPResolver.GetEndPoint(server, port);
                 var result = Task.Factory.FromAsync(
-                    socket.BeginConnect,
-                    socket.EndConnect, ip, null);
+                    Socket.BeginConnect,
+                    Socket.EndConnect, ip, null);
                 result.ContinueWith(
                     (task) => OnError?.Invoke(task.Exception),
                     TaskContinuationOptions.OnlyOnFaulted);
@@ -45,9 +51,9 @@ namespace SocketClient
             try
             {
                 var result = Task.Factory.FromAsync(
-                    (callback, state) => socket.BeginSend(
+                    (callback, state) => Socket.BeginSend(
                         buffer, 0, buffer.Length, 0, callback, state),
-                    socket.EndSend, null);
+                    Socket.EndSend, null);
                 result.ContinueWith(
                     task => OnError?.Invoke(task.Exception),
                     TaskContinuationOptions.OnlyOnFaulted);
@@ -60,9 +66,43 @@ namespace SocketClient
             }
         }
 
-        private void Read()
+        public void ReceiveStart()
         {
-            throw new NotImplementedException();
+            var bytes = new byte[0xffff];
+            Receive(bytes, size => {
+                var copy = new byte[size];
+                Array.Copy(bytes, 0, copy, 0, size);
+                if (copy.Length == 0)
+                {
+                    OnClose?.Invoke();
+                    return;
+                }
+                OnRecv?.Invoke(copy);
+                ReceiveStart();
+            });
         }
+
+        private Task<int> Receive(byte[] buffer, Action<int> callback)
+        {
+            try
+            {
+                var result = Task.Factory.FromAsync(
+                    (c, s) => Socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, c, s),
+                    Socket.EndReceive, null);
+                result.ContinueWith(
+                    task => OnError?.Invoke(task.Exception),
+                    TaskContinuationOptions.OnlyOnFaulted);
+                result.ContinueWith(task => callback(task.Result), TaskContinuationOptions.NotOnFaulted)
+                    .ContinueWith(task => OnError?.Invoke(task.Exception), TaskContinuationOptions.OnlyOnFaulted);
+                result.ContinueWith(task => OnError?.Invoke(task.Exception), TaskContinuationOptions.OnlyOnFaulted);
+                return result;
+            }
+            catch (Exception e)
+            {
+                OnError?.Invoke(e);
+                return null;
+            }
+        }
+
     }
 }
