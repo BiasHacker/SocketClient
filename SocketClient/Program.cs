@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SocketClient
+﻿namespace SocketClient
 {
     class Program
     {
         static void Main(string[] args)
         {
+            // TEST CODE
+            var sock = new SocketManager();
+            sock.Connect("hoge.pl", 19975).Wait();
+            sock.Send(new byte[] { 0, 1, 2, 3 });
         }
     }
 }
