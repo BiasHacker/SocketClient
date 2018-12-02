@@ -17,6 +17,7 @@ namespace SocketClient
             sock.Send(bytes);
             sock.OnRecv += Sock_OnRecv;
             sock.ReceiveStart();
+            sock.Close();
 
             while (true) Console.ReadLine();
         }

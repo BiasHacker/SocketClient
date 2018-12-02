@@ -102,5 +102,20 @@ namespace SocketClient
             }
         }
 
+        public void Close()
+        {
+            if (Socket != null)
+            {
+                try
+                {
+                    Socket.Close();
+                    Socket = null;
+                }
+                catch (Exception e)
+                {
+                    OnError?.Invoke(e);
+                }
+            }
+        }
     }
 }
